@@ -20,17 +20,22 @@ static auto CallFunction(void* function, Args... args) -> decltype((*reinterpret
   return (*reinterpret_cast<Callable*>(function))(args...);
 }
 
+template <class R, class... Args>
+static R CallStdFunction(void* function, Args... args)
+{
+  return (*reinterpret_cast<std::function<R(Args...)>*>(function))(args...);
+}
+
+template <class R, class... Args>
+CallbackInfo<R(void*, Args...)> CreateCallback(std::function<R(Args...)> f) {
+  return CallbackInfo<R(void*, Args...)>{reinterpret_cast<void*>(&f), CallStdFunction<R, Args...>};
+}
+
 #define TO_CALLBACK(f, CallbackType) \
   CallbackInfo<CallbackType>{reinterpret_cast<void*>(&f), CallFunction<decltype(f)>}
 
 #define RUN_CALLBACK(callback, args...) \
   callback.DoAction(callback.instance, args)
-
-//template <class R, class... Args>
-//static R CallStdFunction(void* function, Args... args)
-//{
-//  return (*reinterpret_cast<std::function<R(Args...)>*>(function))(args...);
-//}
 
 typedef void LogCallback(void* log_function, const char* message);
 
@@ -50,5 +55,14 @@ int main() {
 
   ApplyFunction(TO_CALLBACK(f, LogCallback));
   ApplyFunction(TO_CALLBACK(MyLog, LogCallback));
+
+  std::function<void(const char*)> clog_binded = f;
+  ApplyFunction(CreateCallback(clog_binded));
+
+  std::function<void(const char*)> ff = [](const char* message) { std::cout << "ff log: " << message << std::endl; };
+  ApplyFunction(CreateCallback(ff));
+
+  std::function<void(const char*)> my_log = MyLog;
+  ApplyFunction(CreateCallback(my_log));
 }
 
