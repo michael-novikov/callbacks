@@ -11,13 +11,13 @@ struct CallbackInfo {
 };
 
 template <class F, class... Args>
-decltype(auto) Invoke(void *f, Args... args) {
+std::invoke_result_t<F, Args...> Invoke(void *f, Args... args) {
   return std::invoke(*static_cast<typename std::decay<F>::type*>(f), args...);
 }
 
-template <class CallbackType, class F, class... Args>
-CallbackInfo<CallbackType> CreateCallback(F&& f) {
-  return {static_cast<void *>(std::addressof(f)), Invoke<F, Args...>};
+template <class Callback, class F>
+CallbackInfo<Callback> CreateCallback(F &&f) {
+  return {static_cast<void *>(std::addressof(f)), Invoke<F>};
 }
 
 #define RUN_CALLBACK(callback) callback.run(callback.original)
